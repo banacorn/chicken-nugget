@@ -1,13 +1,10 @@
 LIBNAME=libbuzz.a
 
-main: lib
-	ghc -L. -lbuzz --make play.hs -o play
+main:
+	ghc --make -main-is main compressor.hs lzfx.c
 
 clean:
-	rm *.o *.a *.hi play *~
+	rm lzfx.o compressor.hi compressor.o
 
-buzz.o: buzz.c buzz.h
-
-lib: buzz.o
-	ar rc ${LIBNAME} buzz.o
-	ranlib ${LIBNAME}
+test:
+	./compressor 123 10 input output
