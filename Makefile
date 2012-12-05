@@ -1,10 +1,11 @@
 LIBNAME=libbuzz.a
 
 main:
-	ghc --make -main-is main compressor.hs lzfx.c
+	ghc -prof -auto-all --make -O -main-is main compressor.hs lzfx.c
 
 clean:
 	rm lzfx.o compressor.hi compressor.o
 
 test:
-	./compressor 123 10 input output
+	time ./compressor +RTS -p -RTS < data.csv > /dev/null
+	# time ./compressor 8192 32 input output
