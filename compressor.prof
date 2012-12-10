@@ -1,41 +1,57 @@
-	Wed Dec  5 16:41 2012 Time and Allocation Profiling Report  (Final)
+	Mon Dec 10 10:52 2012 Time and Allocation Profiling Report  (Final)
 
-	   compressor +RTS -p -RTS
+	   compressor +RTS -N -p -RTS 4096 32 input output
 
-	total time  =        1.84 secs   (1844 ticks @ 1000 us, 1 processor)
-	total alloc = 1,165,286,056 bytes  (excludes profiling overheads)
+	total time  =        1.81 secs   (1807 ticks @ 1000 us, 1 processor)
+	total alloc = 1,297,919,252 bytes  (excludes profiling overheads)
 
-COST CENTRE MODULE  %time %alloc
+COST CENTRE      MODULE  %time %alloc
 
-adapter     Main     98.8   96.3
-main        Main      0.1    3.3
+adapter.\.\.\    Main     72.9   27.9
+adapter.unpacked Main     23.3   59.2
+collector        Main      1.4    0.6
+adapter          Main      0.5    3.0
+adapter.\        Main      0.2    6.0
+main             Main      0.1    3.0
 
 
-                                                                  individual     inherited
-COST CENTRE             MODULE                  no.     entries  %time %alloc   %time %alloc
+                                                                                  individual     inherited
+COST CENTRE                  MODULE                             no.     entries  %time %alloc   %time %alloc
 
-MAIN                    MAIN                     45           0    0.1    0.0   100.0  100.0
- compressor.processData Main                    101        4690    0.1    0.0    98.9   96.3
-  compress              Main                    103           0    0.0    0.0    98.8   96.3
-   adapter              Main                    104        4690   98.8   96.3    98.8   96.3
-    adapter.chunkSize'  Main                    107        4690    0.0    0.0     0.0    0.0
-    adapter.outputSpace Main                    106        4690    0.0    0.0     0.0    0.0
-    adapter.chunkSize   Main                    105        4690    0.0    0.0     0.0    0.0
- main                   Main                     91           0    0.1    3.3     1.0    3.6
-  chunk                 Main                     98        4691    0.0    0.0     0.0    0.0
-  collector             Main                     97           1    0.9    0.3     0.9    0.3
-  compressor            Main                     95           1    0.0    0.0     0.0    0.0
-  dispatcher            Main                     94           1    0.0    0.0     0.0    0.0
- CAF                    Main                     89           0    0.0    0.0     0.1    0.0
-  compress              Main                    102           1    0.0    0.0     0.0    0.0
-  main                  Main                     90           1    0.1    0.0     0.1    0.0
-   main.outputFilename  Main                    100           1    0.0    0.0     0.0    0.0
-   main.chunkSize       Main                     99           1    0.0    0.0     0.0    0.0
-   main.threadNumber    Main                     96           1    0.0    0.0     0.0    0.0
-   main.(...)           Main                     93           1    0.0    0.0     0.0    0.0
-   main.inputFilename   Main                     92           1    0.0    0.0     0.0    0.0
- CAF                    GHC.Conc.Signal          87           0    0.0    0.0     0.0    0.0
- CAF                    GHC.IO.Encoding          80           0    0.0    0.0     0.0    0.0
- CAF                    GHC.IO.Encoding.Iconv    78           0    0.0    0.0     0.0    0.0
- CAF                    GHC.IO.FD                73           0    0.0    0.0     0.0    0.0
- CAF                    GHC.IO.Handle.FD         71           0    0.0    0.0     0.0    0.0
+MAIN                         MAIN                                52           0    0.0    0.0   100.0  100.0
+ main                        Main                               111           0    0.0    0.0    99.4   96.9
+  collector                  Main                               128           0    1.4    0.6     1.4    0.6
+  compressor                 Main                               115           0    0.8    0.0    98.0   96.3
+   compress                  Main                               117           0    0.1    0.0    97.2   96.2
+    adapter                  Main                               118        9380    0.5    3.0    97.1   96.2
+     adapter.chunkSize'      Main                               125        9380    0.0    0.0     0.0    0.0
+     adapter.unpacked        Main                               124        9380   23.3   59.2    23.3   59.2
+     adapter.outputSpace     Main                               121        9380    0.1    0.0     0.1    0.0
+     adapter.\               Main                               120        9380    0.2    6.0    73.2   34.0
+      adapter.\.\            Main                               122        9380    0.1    0.1    73.0   28.0
+       adapter.\.\.\         Main                               123        9380   72.9   27.9    72.9   27.9
+     adapter.chunkSize       Main                               119        9380    0.0    0.0     0.0    0.0
+  dispatcher                 Main                               112           0    0.1    0.0     0.1    0.0
+ CAF                         Main                               103           0    0.0    0.0     0.6    3.1
+  compress                   Main                               116           1    0.0    0.0     0.0    0.0
+  main                       Main                               104           1    0.1    3.0     0.6    3.1
+   collector                 Main                               126           1    0.0    0.0     0.0    0.0
+   chunk                     Main                               113        9381    0.2    0.1     0.2    0.1
+   compressor                Main                               109           1    0.0    0.0     0.0    0.0
+   dispatcher                Main                               108           1    0.2    0.0     0.2    0.0
+   processArgs               Main                               105           1    0.1    0.0     0.1    0.0
+    processArgs.output       Main                               129           1    0.0    0.0     0.0    0.0
+    processArgs.chunkSize    Main                               114           1    0.0    0.0     0.0    0.0
+    processArgs.threadNumber Main                               110           1    0.0    0.0     0.0    0.0
+    processArgs.(...)        Main                               107           1    0.0    0.0     0.0    0.0
+    processArgs.input        Main                               106           1    0.0    0.0     0.0    0.0
+ CAF                         GHC.Conc.Signal                    101           0    0.0    0.0     0.0    0.0
+ CAF                         GHC.IO.Encoding                     94           0    0.0    0.0     0.0    0.0
+ CAF                         GHC.IO.Encoding.Iconv               92           0    0.0    0.0     0.0    0.0
+ CAF                         GHC.IO.FD                           87           0    0.0    0.0     0.0    0.0
+ CAF                         GHC.IO.Handle.FD                    85           0    0.0    0.0     0.0    0.0
+ CAF                         Text.Read.Lex                       68           0    0.0    0.0     0.0    0.0
+ CAF                         GHC.Event.Internal                  65           0    0.0    0.0     0.0    0.0
+ CAF                         GHC.Event.Thread                    61           0    0.0    0.0     0.0    0.0
+ CAF                         GHC.Integer.Logarithms.Internals    60           0    0.0    0.0     0.0    0.0
+  main                       Main                               127           0    0.0    0.0     0.0    0.0

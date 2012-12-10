@@ -6,46 +6,43 @@ import Data.Char (chr, ord)
 import Data.Ord (comparing)
 import Data.List (sortBy)
 import qualified Data.ByteString as B
+import qualified Data.ByteString.Internal as BI
 import System.IO
-import System.IO.Unsafe (unsafePerformIO)
 import System.Environment (getArgs)     
 import Control.Monad
 import Control.Concurrent
 
-foreign import ccall "lzfx.h lzfx_compress"
+foreign import ccall safe "lzfx.h lzfx_compress"
     c_compress :: Ptr Word8 -> CUInt -> Ptr Word8 -> Ptr CUInt -> IO CInt
 
-foreign import ccall "lzfx.h lzfx_decompress"
+foreign import ccall safe "lzfx.h lzfx_decompress"
     c_decompress :: Ptr Word8 -> CUInt -> Ptr Word8 -> Ptr CUInt -> IO CInt
 
-adapter :: (Ptr Word8 -> CUInt -> Ptr Word8 -> Ptr CUInt -> IO CInt) -> B.ByteString -> B.ByteString
-adapter function input = B.pack . unsafePerformIO $ do
-    -- allocate spaces
-    inputBuffer <- mallocBytes chunkSize
-    outputBuffer <- mallocBytes outputSpace
-    outputLength <- mallocBytes 32
-    -- put it in
-    pokeArray inputBuffer $ B.unpack input
-    poke outputLength (fromIntegral outputSpace)
-    -- munching data
-    signal <- function inputBuffer chunkSize' outputBuffer outputLength
-    if signal /= 0 then error ("ERROR " ++ show signal) else return ()
-    -- take it out
-    outputSize <- peek outputLength
-    output <- peekArray (fromIntegral outputSize) outputBuffer
-    -- free spaces
-    free inputBuffer
-    free outputBuffer
-    free outputLength
-    -- lift
-    return output
+adapter :: (Ptr Word8 -> CUInt -> Ptr Word8 -> Ptr CUInt -> IO CInt) -> B.ByteString -> IO B.ByteString
+adapter function input =
+    allocaBytes chunkSize $ \inputBuffer -> do
+        allocaBytes outputSpace $ \outputBuffer -> do
+            allocaBytes 32 $ \outputLength -> do
+                pokeArray inputBuffer unpacked
+                poke outputLength (fromIntegral outputSpace)
+                -- munching data
+                signal <- function inputBuffer chunkSize' outputBuffer outputLength
+                if signal /= 0 then error ("ERROR " ++ show signal) else return ()
+                -- take it out
+                outputSize <- peek outputLength
+                output <- peekArray (fromIntegral outputSize) outputBuffer
+                return (B.pack output) 
+
     where   chunkSize = B.length input
             chunkSize' = fromIntegral chunkSize
             outputSpace = if chunkSize < 10 then 10 else chunkSize * 2
+            unpacked = B.unpack input
 
-compress :: B.ByteString -> B.ByteString
+compress :: B.ByteString -> IO B.ByteString
 compress = adapter c_compress
-decompress :: B.ByteString -> B.ByteString
+
+
+decompress :: B.ByteString -> IO B.ByteString
 decompress = adapter c_decompress
 
 reader filename = do
@@ -53,7 +50,6 @@ reader filename = do
 
 chunk :: Int -> B.ByteString -> [B.ByteString]
 chunk size string = if B.null string then [] else B.take size string : chunk size (B.drop size string)
-
 
 processArgs args = 
     let [chunkSize, threadNumber, input, output] = args in
@@ -67,8 +63,11 @@ processArgs args =
 
 dispatcher input chunks = forkIO $ mapM_ (putMVar input) chunks
 
-compressor threadNumber input output = replicateM_ threadNumber $ forkIO . forever $ takeMVar input >>= putMVar output . processData
-    where processData (a, b) = (a, compress b)
+compressor threadNumber input output = replicateM_ threadNumber $ forkIO . forever $ do 
+    --myThreadId >>= putStrLn . show
+    (a, b) <- takeMVar input
+    b' <- compress b
+    putMVar output (a, b')
 
 collector chunkNumber outputFilename output exit = forkIO $ do
     replicateM chunkNumber (takeMVar output) >>= B.writeFile outputFilename . B.concat . snd . unzip . sortBy (comparing fst)
@@ -76,15 +75,10 @@ collector chunkNumber outputFilename output exit = forkIO $ do
 
 main = 
     let 
-        a = B.pack [1..40]
-        a10 = chunk 10 a
-        a20 = chunk 20 a
-        (chunkSize, threadNumber, inputFilename, outputFilename) = (8192, 32, "input", "output")
-    in
-    do
-    --(chunkSize, threadNumber, inputFilename, outputFilename) <- getArgs >>= processArgs
+        --(chunkSize, threadNumber, inputFilename, outputFilename) = (8192, 1, "input", "output")
+    in do
+    (chunkSize, threadNumber, inputFilename, outputFilename) <- getArgs >>= processArgs
     chunks      <- B.readFile inputFilename >>= return . zip [0..] . chunk chunkSize
-    --putStrLn $ show . length $ chunks
     input       <- newEmptyMVar
     output      <- newEmptyMVar
     exit        <- newEmptyMVar

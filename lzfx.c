@@ -33,6 +33,8 @@
 
 #include "lzfx.h"
 
+#include <sys/types.h>
+
 #define LZFX_HSIZE (1 << (LZFX_HLOG))
 
 /* We need this for memset */
@@ -88,7 +90,6 @@ int lzfx_getsize(const void* ibuf, unsigned int ilen, unsigned int *olen);
 
 int lzfx_compress(const void *const ibuf, const unsigned int ilen,
                               void *obuf, unsigned int *const olen){
-
 
     /* Hash table; an array of u8*'s which point
        to various locations in the input buffer */
@@ -224,8 +225,9 @@ int lzfx_compress(const void *const ibuf, const unsigned int ilen,
 
     op [- lit - 1] = lit - 1;
     op -= !lit;
-
+// 
     *olen = op - (u8 *)obuf;
+
     return 0;
 }
 
@@ -360,6 +362,8 @@ int lzfx_getsize(const void* ibuf, unsigned int ilen, unsigned int *olen){
     }
 
     *olen = tot_len;
+
+
 
     return 0;
 }
