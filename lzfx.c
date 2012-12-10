@@ -33,7 +33,8 @@
 
 #include "lzfx.h"
 
-#include <sys/types.h>
+// #include <pthread.h>
+// #include <sys/syscall.h>
 
 #define LZFX_HSIZE (1 << (LZFX_HLOG))
 
@@ -90,6 +91,9 @@ int lzfx_getsize(const void* ibuf, unsigned int ilen, unsigned int *olen);
 
 int lzfx_compress(const void *const ibuf, const unsigned int ilen,
                               void *obuf, unsigned int *const olen){
+
+    // int tid = syscall(SYS_thread_selfid);
+    // printf("start %d\n", tid);
 
     /* Hash table; an array of u8*'s which point
        to various locations in the input buffer */
@@ -227,6 +231,9 @@ int lzfx_compress(const void *const ibuf, const unsigned int ilen,
     op -= !lit;
 // 
     *olen = op - (u8 *)obuf;
+
+    // printf("  end %d\n", tid);
+
 
     return 0;
 }

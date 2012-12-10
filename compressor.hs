@@ -1,56 +1,25 @@
 {-# LANGUAGE ForeignFunctionInterface #-}
 
-import Foreign.C
-import Foreign hiding (unsafePerformIO, void)
+import Banana
+--import Foreign.C
+--import Foreign hiding (unsafePerformIO, void)
 import Data.Char (chr, ord)
 import Data.Ord (comparing)
 import Data.List (sortBy)
 import qualified Data.ByteString as B
-import qualified Data.ByteString.Internal as BI
+--import qualified Data.ByteString.Internal as BI
 import System.IO
 import System.Environment (getArgs)     
 import Control.Monad
 import Control.Concurrent
+import Control.Applicative ((<$>), (<*>))
 
-foreign import ccall safe "lzfx.h lzfx_compress"
-    c_compress :: Ptr Word8 -> CUInt -> Ptr Word8 -> Ptr CUInt -> IO CInt
+type ChunkSize = Int
+type ThreadNumber = Int
+type Chunk = (Int, B.ByteString)
 
-foreign import ccall safe "lzfx.h lzfx_decompress"
-    c_decompress :: Ptr Word8 -> CUInt -> Ptr Word8 -> Ptr CUInt -> IO CInt
-
-adapter :: (Ptr Word8 -> CUInt -> Ptr Word8 -> Ptr CUInt -> IO CInt) -> B.ByteString -> IO B.ByteString
-adapter function input =
-    allocaBytes chunkSize $ \inputBuffer -> do
-        allocaBytes outputSpace $ \outputBuffer -> do
-            allocaBytes 32 $ \outputLength -> do
-                pokeArray inputBuffer unpacked
-                poke outputLength (fromIntegral outputSpace)
-                -- munching data
-                signal <- function inputBuffer chunkSize' outputBuffer outputLength
-                if signal /= 0 then error ("ERROR " ++ show signal) else return ()
-                -- take it out
-                outputSize <- peek outputLength
-                output <- peekArray (fromIntegral outputSize) outputBuffer
-                return (B.pack output) 
-
-    where   chunkSize = B.length input
-            chunkSize' = fromIntegral chunkSize
-            outputSpace = if chunkSize < 10 then 10 else chunkSize * 2
-            unpacked = B.unpack input
-
-compress :: B.ByteString -> IO B.ByteString
-compress = adapter c_compress
-
-
-decompress :: B.ByteString -> IO B.ByteString
-decompress = adapter c_decompress
-
-reader filename = do
-    B.readFile filename >>= putStrLn . show
-
-chunk :: Int -> B.ByteString -> [B.ByteString]
-chunk size string = if B.null string then [] else B.take size string : chunk size (B.drop size string)
-
+-- munch args
+processArgs :: [String] -> IO (ChunkSize, ThreadNumber, FilePath, FilePath)
 processArgs args = 
     let [chunkSize, threadNumber, input, output] = args in
     if length args /= 4 then do
@@ -59,30 +28,43 @@ processArgs args =
     else
         return (read chunkSize, read threadNumber, input, output)
 
-
-
+-- producer
+-- puts all chunks in the MVar `input`
+dispatcher :: MVar Chunk -> [Chunk] -> IO ThreadId
 dispatcher input chunks = forkIO $ mapM_ (putMVar input) chunks
 
+--decompressor output input = B.readFile output >>= decompress >>=  B.writeFile (input ++ "_")
+
+-- processor, with specific number of worker threads
+-- takes a chunk from `input`, process it, and puts it back to `output`
+compressor :: ThreadNumber -> MVar Chunk -> MVar Chunk -> IO ()
 compressor threadNumber input output = replicateM_ threadNumber $ forkIO . forever $ do 
-    --myThreadId >>= putStrLn . show
     (a, b) <- takeMVar input
     b' <- compress b
     putMVar output (a, b')
 
+-- consumer
+-- collects all proccesed chunks from `input`, rip order-tags, concat and write file
+-- put unit in MVar `exit` to notify the main thread to exit
+collector :: Int -> FilePath -> MVar Chunk -> MVar () -> IO ThreadId
 collector chunkNumber outputFilename output exit = forkIO $ do
     replicateM chunkNumber (takeMVar output) >>= B.writeFile outputFilename . B.concat . snd . unzip . sortBy (comparing fst)
-    putMVar exit True
+    putMVar exit ()
 
-main = 
-    let 
-        --(chunkSize, threadNumber, inputFilename, outputFilename) = (8192, 1, "input", "output")
-    in do
+main = do
     (chunkSize, threadNumber, inputFilename, outputFilename) <- getArgs >>= processArgs
-    chunks      <- B.readFile inputFilename >>= return . zip [0..] . chunk chunkSize
+    chunks      <- B.readFile inputFilename >>= tagChunks chunkSize
+    
+    -- MVars
     input       <- newEmptyMVar
     output      <- newEmptyMVar
     exit        <- newEmptyMVar
+
+    -- 3-stages
     dispatcher input chunks
     compressor threadNumber input output
     collector (length chunks) outputFilename output exit
-    takeMVar exit
+    
+    takeMVar exit   -- blocks when not done
+
+    where tagChunks chunkSize = return . zip [0..] . chunk chunkSize
