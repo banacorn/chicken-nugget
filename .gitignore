@@ -2,3 +2,6 @@
 *.hi
 input
 output
+compressor
+mcompress
+decompressor

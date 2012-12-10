@@ -1,18 +1,14 @@
 {-# LANGUAGE ForeignFunctionInterface #-}
 
 import Banana
---import Foreign.C
---import Foreign hiding (unsafePerformIO, void)
 import Data.Char (chr, ord)
 import Data.Ord (comparing)
 import Data.List (sortBy)
 import qualified Data.ByteString as B
---import qualified Data.ByteString.Internal as BI
 import System.IO
 import System.Environment (getArgs)     
 import Control.Monad
 import Control.Concurrent
-import Control.Applicative ((<$>), (<*>))
 
 type ChunkSize = Int
 type ThreadNumber = Int

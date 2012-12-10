@@ -2,7 +2,7 @@ input = input
 output = output
 
 main: compressor.hs banana.hs decompressor.hs lzfx.c lzfx.h
-	ghc -threaded -with-rtsopts="-N" -o mcompress compressor.hs lzfx.c
+	ghc -threaded -with-rtsopts="-N" -o mcompress compressor.hs banana.hs lzfx.c
 	ghc decompressor.hs lzfx.c
 
 benchmark:
